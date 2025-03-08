@@ -5,9 +5,9 @@ const quantityInput = document.getElementById("quantity");
 const characteristicsInput = document.getElementById("characteristics");
 const editIndexInput = document.getElementById("edit-index");
 
-let logs = []; // Arreglo para los logs
+let logs = []; 
 
-const securityCode = "789456123"; // Required security code
+const securityCode = "789456123"; 
 
 function authenticate() {
     const code = prompt("Ingresa el código de seguridad:");
@@ -27,7 +27,7 @@ function authenticate() {
 
 function getTimestamp() {
     const now = new Date();
-    return now.toISOString().replace("T", " ").split(".")[0]; // Formato: YYYY-MM-DD HH:mm:ss
+    return now.toISOString().replace("T", " ").split(".")[0]; 
 }
 
 function loadInventory() {

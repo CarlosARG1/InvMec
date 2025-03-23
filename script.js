@@ -1,37 +1,35 @@
-const inventoryTable = document.getElementById("inventory-table");
-const productForm = document.getElementById("product-form");
-const nameInput = document.getElementById("name");
-const quantityInput = document.getElementById("quantity");
-const characteristicsInput = document.getElementById("characteristics");
-const editIndexInput = document.getElementById("edit-index");
+const API_URL = 'http://localhost:3000';
+let token = localStorage.getItem('token');
 
-let logs = []; 
-
-const securityCode = "789456123"; 
-
-function authenticate() {
-    const code = prompt("Ingresa el código de seguridad:");
-    if (code !== securityCode) {
-        alert("Código incorrecto. Acción denegada.");
-        return false;
+async function login(username, password) {
+    const response = await fetch(`${API_URL}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+    });
+    const data = await response.json();
+    if (data.token) {
+        localStorage.setItem('token', data.token);
+        token = data.token;
+        loadInventory();
+    } else {
+        alert('Error en inicio de sesión');
     }
-
-    const studentCode = prompt("Ingresa tu código de estudiante:");
-    if (!/^\d{9}$/.test(studentCode)) {
-        alert("Código de estudiante invalido. Acción denegada.");
-        return false;
-    }
-
-    return studentCode;
 }
 
-function getTimestamp() {
-    const now = new Date();
-    return now.toISOString().replace("T", " ").split(".")[0]; 
-}
+document.getElementById('login-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    login(username, password);
+});
 
-function loadInventory() {
-    const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
+async function loadInventory() {
+    const response = await fetch(`${API_URL}/inventory`, {
+        headers: { 'Authorization': token }
+    });
+    const inventory = await response.json();
+    const inventoryTable = document.getElementById('inventory-table');
     inventoryTable.innerHTML = inventory.map((product, index) => `
         <tr>
             <td>${index + 1}</td>
@@ -39,78 +37,48 @@ function loadInventory() {
             <td>${product.quantity}</td>
             <td>${product.characteristics}</td>
             <td>
-                <button onclick="editProduct(${index})">Editar</button>
-                <button onclick="removeProduct(${index})">Eliminar</button>
+                <button onclick="editProduct(${product.id})">Editar</button>
+                <button onclick="removeProduct(${product.id})">Eliminar</button>
             </td>
         </tr>
-    `).join("");
+    `).join('');
 }
 
-function saveInventory(inventory) {
-    localStorage.setItem("inventory", JSON.stringify(inventory));
+document.getElementById('product-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('name').value;
+    const quantity = document.getElementById('quantity').value;
+    const characteristics = document.getElementById('characteristics').value;
+
+    await fetch(`${API_URL}/inventory`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': token
+        },
+        body: JSON.stringify({ name, quantity, characteristics })
+    });
+    loadInventory();
+});
+
+async function removeProduct(id) {
+    await fetch(`${API_URL}/inventory/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': token }
+    });
     loadInventory();
 }
 
-productForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-    const studentCode = authenticate();
-    if (!studentCode) return;
-
-    const name = nameInput.value.trim();
-    const quantity = parseInt(quantityInput.value.trim(), 10);
-    const characteristics = characteristicsInput.value.trim();
-
-    const inventory = JSON.parse(localStorage.getItem("inventory")) || [];
-    const editIndex = editIndexInput.value;
-
-    if (editIndex) {
-        logs.push(`[${getTimestamp()}] Se actualizó un producto: ${name} | Cantidad: ${quantity} | Características: ${characteristics} | Código de estudiante: ${studentCode}`);
-        inventory[editIndex] = { name, quantity, characteristics };
-        editIndexInput.value = "";
-    } else {
-        logs.push(`[${getTimestamp()}] Se añadió un producto: ${name} | Cantidad: ${quantity} | Características: ${characteristics} | Código de estudiante: ${studentCode}`);
-        inventory.push({ name, quantity, characteristics });
-    }
-
-    saveInventory(inventory);
-
-    nameInput.value = "";
-    quantityInput.value = "";
-    characteristicsInput.value = "";
-});
-
-function editProduct(index) {
-    const studentCode = authenticate();
-    if (!studentCode) return;
-
-    const inventory = JSON.parse(localStorage.getItem("inventory"));
-    const product = inventory[index];
-    nameInput.value = product.name;
-    quantityInput.value = product.quantity;
-    characteristicsInput.value = product.characteristics;
-    editIndexInput.value = index;
-}
-
-function removeProduct(index) {
-    const studentCode = authenticate();
-    if (!studentCode) return;
-
-    const reason = prompt("¿Porque debes eliminar este producto?:");
-    if (reason) {
-        const inventory = JSON.parse(localStorage.getItem("inventory"));
-        const removedProduct = inventory.splice(index, 1)[0];
-        logs.push(`[${getTimestamp()}] Se eliminó un producto: ${removedProduct.name} | Razón: ${reason} | Código de estudiante: ${studentCode}`);
-        saveInventory(inventory);
-        alert(`El articulo fue removido porque: "${reason}"`);
-    }
-}
-
-function downloadLogs() {
-    const blob = new Blob([logs.join("\n")], { type: "text/plain" });
+async function downloadLogs() {
+    const response = await fetch(`${API_URL}/logs`, {
+        headers: { 'Authorization': token }
+    });
+    const logs = await response.json();
+    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
+    const a = document.createElement('a');
     a.href = url;
-    a.download = "inventory_logs.txt";
+    a.download = 'logs.json';
     a.click();
     URL.revokeObjectURL(url);
 }

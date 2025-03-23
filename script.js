@@ -1,4 +1,3 @@
-// frontend/script.js
 const API_URL = 'http://localhost:3000';
 let token = localStorage.getItem('token');
 

@@ -10,7 +10,7 @@ const db = new sqlite3.Database('./inventory.db');
 app.use(cors());
 app.use(express.json());
 
-const SECRET_KEY = 'udg_virtual_2025'; 
+const SECRET_KEY = 'udg_virtual_2021'; 
 
 db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
